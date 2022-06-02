@@ -15,6 +15,8 @@ import hydra
 import numpy as np
 import torch
 from dm_env import specs
+import gym
+import atari
 
 import dmc
 import utils
@@ -25,9 +27,9 @@ from video import TrainVideoRecorder, VideoRecorder
 torch.backends.cudnn.benchmark = True
 
 
-def make_agent(obs_spec, action_spec, cfg):
-    cfg.obs_shape = obs_spec.shape
-    cfg.action_shape = action_spec.shape
+def make_agent(obs_shape, action_shape, cfg):
+    cfg.obs_shape = obs_shape.shape
+    cfg.action_shape = (action_shape.n,)
     return hydra.utils.instantiate(cfg)
 
 
@@ -40,10 +42,21 @@ class Workspace:
         utils.set_seed_everywhere(cfg.seed)
         self.device = torch.device(cfg.device)
         self.setup()
+        '''
+        print(dmc.make(self.cfg.task_name, self.cfg.frame_stack,
+                                 self.cfg.action_repeat, self.cfg.seed)
+                                 .reset())
+        print(self.train_env.action_space)
+        print(dmc.make(self.cfg.task_name, self.cfg.frame_stack,
+                                 self.cfg.action_repeat, self.cfg.seed)
+                                 .observation_spec())
+        print(self.train_env.observation_space)
+        '''
 
-        self.agent = make_agent(self.train_env.observation_spec(),
-                                self.train_env.action_spec(),
+        self.agent = make_agent(self.train_env.observation_space,
+                                self.train_env.action_space,
                                 self.cfg.agent)
+        print(self.train_env.reset())
         self.timer = utils.Timer()
         self._global_step = 0
         self._global_episode = 0
@@ -52,13 +65,34 @@ class Workspace:
         # create logger
         self.logger = Logger(self.work_dir, use_tb=self.cfg.use_tb)
         # create envs
+        self.train_env = atari.make_env("Breakout-v4", 123)
+        self.eval_env = atari.make_env("Breakout-v4", 124)
+        '''
+        self.train_env = gym.make("ALE/Breakout-v5")
+        self.eval_env = gym.make("ALE/Breakout-v5")
         self.train_env = dmc.make(self.cfg.task_name, self.cfg.frame_stack,
                                   self.cfg.action_repeat, self.cfg.seed)
         self.eval_env = dmc.make(self.cfg.task_name, self.cfg.frame_stack,
                                  self.cfg.action_repeat, self.cfg.seed)
+                                 '''
+        
         # create replay buffer
+        '''
         data_specs = (self.train_env.observation_spec(),
                       self.train_env.action_spec(),
+                      specs.Array((1,), np.float32, 'reward'),
+                      specs.Array((1,), np.float32, 'discount'))
+                      '''
+        obs_space = self.train_env.observation_space
+        ba_obs = specs.BoundedArray(obs_space.shape, obs_space.dtype,
+                                    obs_space.low, obs_space.high, 'observation')
+        act_space = self.train_env.action_space
+        ba_act = specs.BoundedArray((act_space.n,), np.float32,
+                                    -1.0, 1.0, 'action')
+
+        print(ba_obs.name)
+        data_specs = (ba_obs,
+                      ba_act,
                       specs.Array((1,), np.float32, 'reward'),
                       specs.Array((1,), np.float32, 'discount'))
 
