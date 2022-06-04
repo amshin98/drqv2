@@ -2,7 +2,9 @@
 
 # DrQ-v2: Improved Data-Augmented RL Agent
 
-This is an original PyTorch implementation of DrQ-v2 from
+The work done in this repository was part of a class project done with @Melinal23, @khanmzeeshan, and @patrickrperrine.
+
+This is a fork of the implementation of
 
 [[Mastering Visual Continuous Control: Improved Data-Augmented Reinforcement Learning]](https://arxiv.org/abs/2107.09645) by
 
